@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Journal — Placement Quest</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Sticky Navbar -->
+  <nav id="navbar" class="navbar"></nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <div style="margin-bottom: 28px;">
+        <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800;">Daily Study Journal</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Three simple fields to consolidate memory, track progress, and avoid repeating mistakes.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        
+        <!-- Form Section -->
+        <div class="card">
+          <div class="card-title">
+            <span>📝 Record Today's Entry</span>
+            <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: var(--primary);">Daily Reflection</span>
+          </div>
+
+          <form id="journal-form" class="journal-form" onsubmit="saveJournalEntry(event)">
+            <div class="form-group">
+              <label for="journal-learned">Today I learned</label>
+              <textarea id="journal-learned" class="form-control" placeholder="e.g. Kadane's algorithm resets max sum when local sum goes negative; O(n) time complexity."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="journal-mistake">Biggest mistake</label>
+              <textarea id="journal-mistake" class="form-control" placeholder="e.g. Forgot edge case when array has all negative numbers."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="journal-focus">Tomorrow's focus</label>
+              <textarea id="journal-focus" class="form-control" placeholder="e.g. Complete 3Sum and Container With Most Water two pointer problems."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 8px;">
+              💾 Save Journal Entry
+            </button>
+          </form>
+        </div>
+
+        <!-- History Section -->
+        <div class="card">
+          <div class="card-title">
+            <span>📜 Journal Timeline</span>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">Past Log</span>
+          </div>
+
+          <div id="journal-timeline" class="journal-timeline"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Placement Quest • Zero-Backend DSA Progress Tracker • Deployable on GitHub Pages</p>
+    </div>
+  </footer>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/journal.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Achievements — Placement Quest</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Sticky Navbar -->
+  <nav id="navbar" class="navbar"></nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800;">Badges & Milestones</h1>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Unlock badges automatically by solving problems, mastering patterns, and maintaining your daily streak.</p>
+        </div>
+        <div id="achievements-stats" class="card" style="padding: 12px 20px;"></div>
+      </div>
+
+      <!-- Achievements Grid -->
+      <div id="achievements-grid" class="achievements-grid"></div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Placement Quest • Zero-Backend DSA Progress Tracker • Deployable on GitHub Pages</p>
+    </div>
+  </footer>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/achievements.js"></script>
+</body>
+</html>

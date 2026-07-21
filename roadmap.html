@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roadmap — Placement Quest</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Sticky Navbar -->
+  <nav id="navbar" class="navbar"></nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <div style="margin-bottom: 24px;">
+        <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800;">Infosys OA Hit List (45 Problems)</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Structured by phases: Phase 1 (Q1 Easy/Med), Phase 2 (Q2 Greedy/Intervals), Phase 3 (Q3 DP), Phase 4 (Graphs/Trees).</p>
+      </div>
+
+      <!-- Filters & Search Bar -->
+      <div class="filters-bar">
+        <input type="text" id="search-input" class="search-input" placeholder="🔍 Search problems, patterns, notes...">
+        
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All (45)</button>
+          <button class="filter-tab" data-filter="core">🎯 Core Only (28)</button>
+          <button class="filter-tab" data-filter="phase1">Phase 1 (Q1)</button>
+          <button class="filter-tab" data-filter="phase2">Phase 2 (Q2)</button>
+          <button class="filter-tab" data-filter="phase3">Phase 3 (DP)</button>
+          <button class="filter-tab" data-filter="phase4">Phase 4 (Graphs/Trees)</button>
+          <button class="filter-tab" data-filter="completed">Completed</button>
+        </div>
+      </div>
+
+      <!-- Problems List Container -->
+      <div id="roadmap-list" class="problem-list"></div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Placement Quest • Zero-Backend DSA Progress Tracker • Deployable on GitHub Pages</p>
+    </div>
+  </footer>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/roadmap.js"></script>
+</body>
+</html>

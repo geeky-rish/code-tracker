@@ -1,0 +1,59 @@
+{
+  "user": {
+    "name": "Candidate",
+    "level": 1,
+    "xp": 0,
+    "currentStreak": 1,
+    "longestStreak": 1,
+    "lastActiveDate": "2026-07-22",
+    "startDate": "2026-07-22",
+    "targetDate": "2026-08-10"
+  },
+  "goals": {
+    "dailyXpGoal": 150,
+    "problemsPerDay": 3,
+    "studyHours": 3
+  },
+  "todayMission": {
+    "date": "2026-07-22",
+    "tasks": [
+      { "id": "task_p1", "type": "problem", "problemId": 1, "title": "Problem #1: Two Sum", "xp": 25, "completed": false },
+      { "id": "task_p2", "type": "problem", "problemId": 2, "title": "Problem #2: Contains Duplicate", "xp": 25, "completed": false },
+      { "id": "task_p3", "type": "problem", "problemId": 3, "title": "Problem #3: Valid Anagram", "xp": 25, "completed": false },
+      { "id": "task_p4", "type": "problem", "problemId": 4, "title": "🎯 Problem #4: Group Anagrams", "xp": 50, "completed": false },
+      { "id": "task_java", "type": "session", "title": "Java Fundamentals Review", "xp": 25, "completed": false },
+      { "id": "task_oop", "type": "session", "title": "OOP Concepts Practice", "xp": 25, "completed": false },
+      { "id": "task_rev", "type": "session", "title": "Daily Memory Recall Revision", "xp": 30, "completed": false }
+    ]
+  },
+  "heatmap": {
+    "2026-07-22": { "count": 0, "xp": 0, "hours": 0 }
+  },
+  "journal": [],
+  "bossBattles": [
+    {
+      "day": 5,
+      "date": "2026-07-26",
+      "title": "Phase 1 Boss Battle (3-Hour Mock)",
+      "description": "Solve 3 unseen array/string problems without AI or hints in 3 hours.",
+      "xpReward": 500,
+      "status": "upcoming"
+    },
+    {
+      "day": 8,
+      "date": "2026-07-29",
+      "title": "Greedy & Intervals Timed Sprint",
+      "description": "Re-solve ALL Phase 2 Greedy & Interval problems cold on a blank editor.",
+      "xpReward": 500,
+      "status": "upcoming"
+    },
+    {
+      "day": 15,
+      "date": "2026-08-05",
+      "title": "Full OA Simulation #1",
+      "description": "3-4 problems full test simulation under exact time constraints.",
+      "xpReward": 500,
+      "status": "upcoming"
+    }
+  ]
+}

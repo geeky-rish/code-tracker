@@ -1,0 +1,102 @@
+[
+  {
+    "id": "first_blood",
+    "title": "First Blood",
+    "icon": "⚔️",
+    "description": "Solve your very first problem on Placement Quest.",
+    "category": "milestone",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "solved_count >= 1"
+  },
+  {
+    "id": "hashmap_master",
+    "title": "HashMap Master",
+    "icon": "🗝️",
+    "description": "Complete all problems in Arrays & Hashing.",
+    "category": "pattern",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "pattern_completed:Arrays & Hashing"
+  },
+  {
+    "id": "sliding_window_expert",
+    "title": "Sliding Window Expert",
+    "icon": "🪟",
+    "description": "Complete all Sliding Window problems.",
+    "category": "pattern",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "pattern_completed:Sliding Window"
+  },
+  {
+    "id": "greedy_tactician",
+    "title": "Greedy Tactician",
+    "icon": "🎯",
+    "description": "Complete all Phase 2 Greedy & Interval problems.",
+    "category": "phase",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "pattern_completed:Greedy"
+  },
+  {
+    "id": "dp_survivor",
+    "title": "DP Survivor",
+    "icon": "🌋",
+    "description": "Conquer all 14 Dynamic Programming problems.",
+    "category": "pattern",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "pattern_completed:DP"
+  },
+  {
+    "id": "graph_tree_lord",
+    "title": "Graph & Tree Master",
+    "icon": "🌳",
+    "description": "Complete all Graphs and Binary Trees problems.",
+    "category": "pattern",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "pattern_completed:Graphs"
+  },
+  {
+    "id": "halfway_there",
+    "title": "Halfway There",
+    "icon": "⚡",
+    "description": "Solve at least 22 problems on the Hit List.",
+    "category": "milestone",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "solved_count >= 22"
+  },
+  {
+    "id": "placement_ready",
+    "title": "Placement Ready",
+    "icon": "👑",
+    "description": "Complete all 45 problems on the Infosys Hit List!",
+    "category": "milestone",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "solved_count >= 45"
+  },
+  {
+    "id": "streak_master",
+    "title": "On Fire (7-Day Streak)",
+    "icon": "🔥",
+    "description": "Maintain a continuous 7-day study streak.",
+    "category": "streak",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "streak >= 7"
+  },
+  {
+    "id": "boss_slayer",
+    "title": "Boss Slayer",
+    "icon": "👹",
+    "description": "Conquer a 3-hour Boss Battle Mock Test.",
+    "category": "special",
+    "unlocked": false,
+    "unlockedAt": null,
+    "condition": "boss_battles_completed >= 1"
+  }
+]
