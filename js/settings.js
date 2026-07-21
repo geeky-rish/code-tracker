@@ -1,5 +1,5 @@
 /**
- * Placement Quest - Settings & GitHub API Sync Engine
+ * Placement Quest - Settings Engine (MongoDB Data API)
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,57 +19,61 @@ function initSettings() {
   document.getElementById('goal-problems').value = goals.problemsPerDay || 3;
   document.getElementById('goal-hours').value = goals.studyHours || 3;
 
-  // GitHub Sync fields
-  const ghConfig = store.githubConfig || {};
-  document.getElementById('gh-token').value = ghConfig.token || '';
-  document.getElementById('gh-repo').value = ghConfig.repo || 'geeky-rish/code-tracker';
-  document.getElementById('gh-branch').value = ghConfig.branch || 'main';
+  // MongoDB Atlas configuration inputs
+  const mongo = store.mongoConfig || {};
+  document.getElementById('mongo-apikey').value = mongo.apiKey || '';
+  document.getElementById('mongo-appid').value = mongo.appId || '';
+  document.getElementById('mongo-cluster').value = mongo.cluster || 'Cluster0';
+  document.getElementById('mongo-database').value = mongo.database || 'placement_quest';
+  document.getElementById('mongo-region').value = mongo.region || 'ap-south-1';
 
-  updateGhStatus(!!ghConfig.token);
+  updateMongoStatus(!!mongo.apiKey);
 }
 
-function saveGoals(e) {
+async function saveGoals(e) {
   e.preventDefault();
   const store = window.appStore;
   
-  store.progress.goals = {
-    dailyXpGoal: parseInt(document.getElementById('goal-xp').value, 10) || 150,
-    problemsPerDay: parseInt(document.getElementById('goal-problems').value, 10) || 3,
-    studyHours: parseFloat(document.getElementById('goal-hours').value) || 3
-  };
+  const xp = parseInt(document.getElementById('goal-xp').value, 10) || 150;
+  const prob = parseInt(document.getElementById('goal-problems').value, 10) || 3;
+  const hrs = parseFloat(document.getElementById('goal-hours').value) || 3;
 
-  store.saveAll();
-  window.showToast("Daily goals updated successfully!", "success", "⚙️");
+  const success = store.saveGoals(xp, prob, hrs);
+  if (success) {
+    window.showToast("Daily goals updated locally!", "success", "⚙️");
+  }
 }
 
-async function saveGitHubSync(e) {
+async function saveMongoSync(e) {
   e.preventDefault();
-  const token = document.getElementById('gh-token').value.trim();
-  const repo = document.getElementById('gh-repo').value.trim();
-  const branch = document.getElementById('gh-branch').value.trim();
+  const apiKey = document.getElementById('mongo-apikey').value.trim();
+  const appId = document.getElementById('mongo-appid').value.trim();
+  const cluster = document.getElementById('mongo-cluster').value.trim();
+  const database = document.getElementById('mongo-database').value.trim();
+  const region = document.getElementById('mongo-region').value.trim();
 
-  if (!token) {
-    window.showToast("Please enter a valid GitHub Personal Access Token", "danger", "⚠️");
+  if (!apiKey || !appId) {
+    window.showToast("Please fill in both your Atlas API Key and App ID!", "danger", "⚠️");
     return;
   }
 
-  window.showToast("Testing GitHub API connection...", "info", "🔍");
-  const success = await window.appStore.saveGitHubConfig(token, repo, branch);
+  window.showToast("Establishing connection to MongoDB Atlas...", "info", "🍃");
+  const success = await window.appStore.saveMongoConfig(apiKey, appId, cluster, database, region);
 
   if (success) {
-    updateGhStatus(true);
-    window.showToast("☁️ Connected to GitHub API! Automatic cross-device sync active.", "success", "⚡");
+    updateMongoStatus(true);
+    window.showToast("🍃 Connected to MongoDB Atlas! Data synced successfully.", "success", "⚡");
   } else {
-    updateGhStatus(false);
-    window.showToast("Failed to sync with GitHub API. Check token permissions.", "danger", "❌");
+    updateMongoStatus(false);
+    window.showToast("Connection failed. Check API key permissions and App ID.", "danger", "❌");
   }
 }
 
-function updateGhStatus(isConnected) {
-  const statusElem = document.getElementById('gh-status-badge');
+function updateMongoStatus(isConnected) {
+  const statusElem = document.getElementById('mongo-status-badge');
   if (statusElem) {
     if (isConnected) {
-      statusElem.innerHTML = `<span style="color: var(--emerald); font-weight: 700;">🟢 Active Sync</span>`;
+      statusElem.innerHTML = `<span style="color: var(--emerald); font-weight: 700;">🟢 Connected to Atlas</span>`;
     } else {
       statusElem.innerHTML = `<span style="color: var(--text-dim); font-weight: 600;">⚪ Disconnected</span>`;
     }
@@ -81,31 +85,6 @@ function exportJSON() {
   window.showToast("Data exported as JSON file!", "success", "📥");
 }
 
-function importJSONFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const success = await window.appStore.importDataJSON(e.target.result);
-    if (success) {
-      window.showToast("Data imported successfully! Reloading...", "success", "📤");
-      setTimeout(() => location.reload(), 1200);
-    } else {
-      window.showToast("Invalid JSON file format!", "danger", "❌");
-    }
-  };
-  reader.readAsText(file);
-}
-
-function resetProgress() {
-  if (confirm("Are you sure you want to reset ALL progress? This will clear your XP, streak, and problem checkboxes.")) {
-    window.appStore.resetAllData();
-  }
-}
-
 window.saveGoals = saveGoals;
-window.saveGitHubSync = saveGitHubSync;
+window.saveMongoSync = saveMongoSync;
 window.exportJSON = exportJSON;
-window.importJSONFile = importJSONFile;
-window.resetProgress = resetProgress;

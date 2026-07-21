@@ -1,9 +1,8 @@
 /**
- * Placement Quest - Dashboard Logic Engine
+ * Placement Quest - Dashboard Logic Engine (Pure GitHub Pages)
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Wait for store initialization
   const checkStore = setInterval(() => {
     if (window.appStore && window.appStore.isInitialized) {
       clearInterval(checkStore);
@@ -21,20 +20,18 @@ function initDashboard() {
 
 function renderHeroStats() {
   const store = window.appStore;
-  const user = store.progress.user;
+  const user = store.progress.user || {};
   const levelInfo = store.getLevelInfo();
 
   const totalProblems = store.roadmap.length;
   const solvedProblems = store.roadmap.filter(p => p.status === 'completed').length;
-  const completionPct = Math.round((solvedProblems / totalProblems) * 100);
+  const completionPct = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
 
-  // Target Date calculations (Aug 10, 2026)
   const today = new Date();
   const targetDate = new Date(user.targetDate || '2026-08-10');
   const diffTime = targetDate - today;
   const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-  // Hero Grid Container
   const heroGridElem = document.getElementById('hero-grid');
   if (heroGridElem) {
     heroGridElem.innerHTML = `
@@ -64,7 +61,6 @@ function renderHeroStats() {
     `;
   }
 
-  // XP Banner
   const xpBannerElem = document.getElementById('xp-banner');
   if (xpBannerElem) {
     xpBannerElem.innerHTML = `
@@ -86,7 +82,7 @@ function renderTodayMission() {
   const missionContainer = document.getElementById('mission-list');
   if (!missionContainer) return;
 
-  const tasks = store.progress.todayMission.tasks || [];
+  const tasks = store.progress.todayMission ? (store.progress.todayMission.tasks || []) : [];
 
   missionContainer.innerHTML = tasks.map(task => `
     <div class="mission-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
@@ -105,28 +101,15 @@ function toggleMissionTask(taskId) {
   const task = store.progress.todayMission.tasks.find(t => t.id === taskId);
   if (!task) return;
 
-  task.completed = !task.completed;
-
-  if (task.completed) {
-    // Add XP
-    const result = store.addXP(task.xp, `Completed ${task.title}`);
-    window.showToast(`Completed: ${task.title} (+${task.xp} XP)`, 'success', '⚡');
-    
-    // Also if task corresponds to a roadmap problem, mark that problem solved!
-    if (task.problemId) {
-      store.toggleProblemStatus(task.problemId, 'completed');
+  const success = store.toggleMissionTask(taskId);
+  if (success) {
+    if (task.completed) {
+      window.showToast(`Completed: ${task.title} (+${task.xp} XP)`, 'success', '⚡');
     }
-
-    if (result.leveledUp) {
-      window.showLevelUpModal(result.newLevel);
-    }
-  } else {
-    store.saveAll();
+    window.renderNavbar();
+    renderHeroStats();
+    renderTodayMission();
   }
-
-  window.renderNavbar();
-  renderHeroStats();
-  renderTodayMission();
 }
 
 function renderBossBattle() {
@@ -134,13 +117,16 @@ function renderBossBattle() {
   const container = document.getElementById('boss-battle-container');
   if (!container) return;
 
-  const currentBoss = store.progress.bossBattles[0] || {
+  const bossBattles = store.progress.bossBattles || [];
+  const currentBoss = bossBattles[0] || {
     day: 5,
     title: "Phase 1 Boss Battle (3-Hour Mock)",
     description: "Solve 3 unseen array & hashing problems cold in 3 hours with blank editor.",
     xpReward: 500,
     status: "upcoming"
   };
+
+  const isCompleted = currentBoss.status === 'completed';
 
   container.innerHTML = `
     <div class="card boss-card">
@@ -153,9 +139,15 @@ function renderBossBattle() {
         <span style="font-family: var(--font-mono); font-weight: 700; color: var(--amber);">
           Reward: +${currentBoss.xpReward} XP & Badge
         </span>
-        <button class="btn btn-amber" onclick="triggerBossBattle()">
-          ⚔️ Launch Mock Battle
-        </button>
+        ${isCompleted ? `
+          <button class="btn btn-outline" disabled style="opacity: 0.7;">
+            ✅ Completed (+500 XP)
+          </button>
+        ` : `
+          <button class="btn btn-amber" onclick="triggerBossBattle()">
+            ⚔️ Launch Mock Battle
+          </button>
+        `}
       </div>
     </div>
   `;
@@ -163,28 +155,17 @@ function renderBossBattle() {
 
 function triggerBossBattle() {
   const store = window.appStore;
-  const result = store.addXP(500, "Boss Battle Victory!");
-  
-  // Mark boss battle completed & unlock achievement
-  if (store.progress.bossBattles[0]) {
-    store.progress.bossBattles[0].status = "completed";
-  }
-  
-  // Check boss slayer achievement
-  const bossAch = store.achievements.find(a => a.id === 'boss_slayer');
-  if (bossAch) {
-    bossAch.unlocked = true;
-    bossAch.unlockedAt = new Date().toISOString().split('T')[0];
-  }
-  store.saveAll();
+  const result = store.triggerBossBattle();
 
-  window.showToast("🔥 BOSS BATTLE DEFEATED! Earned +500 XP!", "success", "⚔️");
-  if (result.leveledUp) {
-    window.showLevelUpModal(result.newLevel);
+  if (result) {
+    window.showToast("🔥 BOSS BATTLE DEFEATED! Earned +500 XP!", "success", "⚔️");
+    if (result.leveledUp) {
+      window.showLevelUpModal(result.newLevel);
+    }
+    window.renderNavbar();
+    renderHeroStats();
+    renderBossBattle();
   }
-  window.renderNavbar();
-  renderHeroStats();
-  renderBossBattle();
 }
 
 function renderHeatmap() {
@@ -195,7 +176,6 @@ function renderHeatmap() {
   const heatmapData = store.progress.heatmap || {};
   const today = new Date();
   
-  // Generate last 35 days (5 weeks x 7 days)
   let cellsHTML = '';
   for (let i = 34; i >= 0; i--) {
     const d = new Date(today);

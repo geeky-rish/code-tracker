@@ -16,8 +16,8 @@
     <div class="container">
       
       <div style="margin-bottom: 28px;">
-        <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800;">Settings & Cloud Sync</h1>
-        <p style="color: var(--text-muted); font-size: 0.95rem;">Configure daily targets, setup automatic Mobile & Desktop GitHub API Sync, or backup data.</p>
+        <h1 style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800;">Settings & Cloud Storage</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Configure your daily targets, backup/export data, or connect directly to your MongoDB Atlas cluster.</p>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
@@ -53,7 +53,7 @@
             </form>
           </div>
 
-          <!-- Data Management Card -->
+          <!-- Data Backup Card -->
           <div class="card">
             <div class="card-title">
               <span>💾 Backup & Restore JSON</span>
@@ -66,63 +66,64 @@
 
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="exportJSON()">
-                📥 Export JSON
-              </button>
-              
-              <label class="btn btn-outline" style="cursor: pointer;">
-                📤 Import JSON
-                <input type="file" accept=".json" onchange="importJSONFile(event)" style="display: none;">
-              </label>
-
-              <button class="btn btn-danger" onclick="resetProgress()">
-                🗑️ Reset Progress
+                📥 Export Backup JSON
               </button>
             </div>
           </div>
 
         </div>
 
-        <!-- Automatic Mobile/Desktop GitHub Sync Setup -->
+        <!-- MongoDB Atlas API configuration -->
         <div style="display: flex; flex-direction: column; gap: 24px;">
           
           <div class="card">
             <div class="card-title">
-              <span>☁️ Automatic Mobile & Desktop Sync</span>
-              <span id="gh-status-badge"></span>
+              <span>🍃 MongoDB Atlas Cloud Integration</span>
+              <span id="mongo-status-badge"></span>
             </div>
 
             <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
-              Enter a <strong>GitHub Personal Access Token (PAT)</strong> below. When added, any change on Desktop or Mobile automatically commits to your GitHub repo and keeps all devices in 100% real-time sync!
+              Connect your 100% static GitHub Pages application directly to your <strong>MongoDB Atlas Cluster</strong> via the Atlas HTTPS Data API!
             </p>
 
-            <form onsubmit="saveGitHubSync(event)" style="display: flex; flex-direction: column; gap: 16px;">
+            <form onsubmit="saveMongoSync(event)" style="display: flex; flex-direction: column; gap: 16px;">
               <div class="form-group">
-                <label for="gh-token">GitHub Personal Access Token (PAT)</label>
-                <input type="password" id="gh-token" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required>
-                <span style="font-size: 0.75rem; color: var(--text-dim);">Stored only inside your browser's private localStorage. Never exposed.</span>
+                <label for="mongo-apikey">MongoDB Atlas Data API Key</label>
+                <input type="password" id="mongo-apikey" class="form-control" placeholder="Enter API Key" required>
+                <span style="font-size: 0.75rem; color: var(--text-dim);">Stored securely in browser localStorage on this device only.</span>
               </div>
 
               <div class="form-group">
-                <label for="gh-repo">GitHub Repository</label>
-                <input type="text" id="gh-repo" class="form-control" value="geeky-rish/code-tracker" required>
+                <label for="mongo-appid">Atlas App Services App ID</label>
+                <input type="text" id="mongo-appid" class="form-control" placeholder="e.g. data-xxxxx" required>
               </div>
 
               <div class="form-group">
-                <label for="gh-branch">Branch</label>
-                <input type="text" id="gh-branch" class="form-control" value="main" required>
+                <label for="mongo-cluster">Cluster Name</label>
+                <input type="text" id="mongo-cluster" class="form-control" value="Cluster0" required>
+              </div>
+
+              <div class="form-group">
+                <label for="mongo-database">Database Name</label>
+                <input type="text" id="mongo-database" class="form-control" value="placement_quest" required>
+              </div>
+
+              <div class="form-group">
+                <label for="mongo-region">AWS Region</label>
+                <input type="text" id="mongo-region" class="form-control" value="ap-south-1" required>
               </div>
 
               <button type="submit" class="btn btn-amber">
-                ⚡ Connect GitHub API Sync
+                ⚡ Connect MongoDB Atlas Sync
               </button>
             </form>
 
             <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem; color: var(--text-muted);">
-              <strong>How to get a GitHub Token (30 seconds):</strong><br>
-              1. Go to <a href="https://github.com/settings/tokens?type=beta" target="_blank" style="color: var(--primary);">GitHub Settings → Developer Settings → Personal Access Tokens</a><br>
-              2. Click <strong>Generate New Token</strong><br>
-              3. Grant <strong>Repository Permissions: Contents (Read & Write)</strong><br>
-              4. Copy & paste the token here and on your mobile browser!
+              <strong>How to set up MongoDB Atlas Data API (60 seconds):</strong><br>
+              1. Open your MongoDB Atlas Dashboard.<br>
+              2. Go to <strong>App Services</strong> (top tab) → Create a new App (name it `placement-quest-api`).<br>
+              3. Go to <strong>HTTPS Endpoints</strong> or <strong>Data API</strong> → Click **Enable Data API**.<br>
+              4. Generate an <strong>API Key</strong> and copy the **App ID** (found in App Services UI). Paste them here and on your mobile device!
             </div>
           </div>
 
@@ -135,7 +136,7 @@
 
   <footer class="footer">
     <div class="container">
-      <p>Placement Quest • Zero-Backend DSA Progress Tracker • Deployable on GitHub Pages</p>
+      <p>Placement Quest • MongoDB-Powered DSA Progress Tracker</p>
     </div>
   </footer>
 

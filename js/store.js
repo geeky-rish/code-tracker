@@ -1,19 +1,18 @@
 /**
- * Placement Quest - Core Storage, State & GitHub API Sync Engine
+ * Placement Quest - Pure GitHub Pages + MongoDB Atlas Data API Engine
+ * 100% Client-Side Static App (Zero Backend Services)
+ * Communicates directly with MongoDB Atlas via the Atlas HTTPS Data API
  */
 
 const STORAGE_KEYS = {
-  ROADMAP: 'placement_quest_roadmap_v1',
-  PROGRESS: 'placement_quest_progress_v1',
-  ACHIEVEMENTS: 'placement_quest_achievements_v1',
-  AUTH: 'placement_quest_auth_v1',
-  GITHUB_CONFIG: 'placement_quest_github_v1'
+  AUTH: 'placement_quest_auth_v4',
+  LOCAL_DATA: 'placement_quest_local_cache_v4',
+  MONGO_CONFIG: 'placement_quest_mongo_config_v4'
 };
 
-// Password Hash for 'Rish@tgg17' (SHA-256)
 const AUTH_CONFIG = {
   username: "thegeeksguy",
-  // SHA-256 hash of 'Rish@tgg17'
+  // SHA-256 hash of Rish@tgg17
   passwordHash: "6de0d5d33aa42bc136cf08b4abece78c47f0882a2f9f5d5c48c746d33cffa3a3"
 };
 
@@ -33,59 +32,49 @@ const LEVEL_THRESHOLDS = [
 class Store {
   constructor() {
     this.roadmap = [];
-    this.progress = {};
+    this.progress = { user: {}, goals: {}, todayMission: { tasks: [] }, heatmap: {}, journal: [], bossBattles: [] };
     this.achievements = [];
     this.isInitialized = false;
-    this.githubConfig = {
-      token: "",
-      repo: "geeky-rish/code-tracker",
-      branch: "main"
+
+    // MongoDB Data API Configuration
+    this.mongoConfig = {
+      apiKey: "",
+      appId: "", // Atlas App Services App ID
+      cluster: "Cluster0",
+      database: "placement_quest",
+      region: "ap-south-1" // Default AWS Region
     };
   }
 
   async init() {
     try {
-      // 1. Check Auth state
       if (!this.checkAuthSession()) {
         this.redirectToLogin();
         return false;
       }
 
-      // 2. Load GitHub API config if present
-      const savedGh = localStorage.getItem(STORAGE_KEYS.GITHUB_CONFIG);
-      if (savedGh) {
-        this.githubConfig = JSON.parse(savedGh);
+      // Load Config from localStorage
+      const savedMongo = localStorage.getItem(STORAGE_KEYS.MONGO_CONFIG);
+      if (savedMongo) {
+        this.mongoConfig = JSON.parse(savedMongo);
       }
 
-      // 3. If GitHub PAT is present, fetch remote files from GitHub API first!
-      let remoteLoaded = false;
-      if (this.githubConfig.token && this.githubConfig.repo) {
-        remoteLoaded = await this.syncFromGitHubRemote();
+      // Pull latest from MongoDB Atlas if API Key is configured
+      let syncSuccess = false;
+      if (this.mongoConfig.apiKey && this.mongoConfig.appId) {
+        syncSuccess = await this.syncFromMongoAtlas();
       }
 
-      if (!remoteLoaded) {
-        // Fallback to localStorage or local /data/*.json files
-        const cachedRoadmap = localStorage.getItem(STORAGE_KEYS.ROADMAP);
-        const cachedProgress = localStorage.getItem(STORAGE_KEYS.PROGRESS);
-        const cachedAchievements = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
-
-        if (cachedRoadmap && cachedProgress && cachedAchievements) {
-          this.roadmap = JSON.parse(cachedRoadmap);
-          this.progress = JSON.parse(cachedProgress);
-          this.achievements = JSON.parse(cachedAchievements);
+      if (!syncSuccess) {
+        // Fallback to local cache or fetch default JSON seed files
+        const cached = localStorage.getItem(STORAGE_KEYS.LOCAL_DATA);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          this.roadmap = parsed.roadmap;
+          this.progress = parsed.progress;
+          this.achievements = parsed.achievements;
         } else {
-          // Seed from JSON files in /data/
-          const [rRes, pRes, aRes] = await Promise.all([
-            fetch('./data/roadmap.json'),
-            fetch('./data/progress.json'),
-            fetch('./data/achievements.json')
-          ]);
-
-          this.roadmap = await rRes.json();
-          this.progress = await pRes.json();
-          this.achievements = await aRes.json();
-
-          this.saveAll(false);
+          await this.loadSeedData();
         }
       }
 
@@ -93,9 +82,30 @@ class Store {
       this.isInitialized = true;
       return true;
     } catch (err) {
-      console.error("Failed to initialize store:", err);
+      console.error("Initialization failed:", err);
       return false;
     }
+  }
+
+  async loadSeedData() {
+    const [rRes, pRes, aRes] = await Promise.all([
+      fetch('./data/roadmap.json'),
+      fetch('./data/progress.json'),
+      fetch('./data/achievements.json')
+    ]);
+
+    this.roadmap = await rRes.json();
+    this.progress = await pRes.json();
+    this.achievements = await aRes.json();
+    this.saveLocalCache();
+  }
+
+  saveLocalCache() {
+    localStorage.setItem(STORAGE_KEYS.LOCAL_DATA, JSON.stringify({
+      roadmap: this.roadmap,
+      progress: this.progress,
+      achievements: this.achievements
+    }));
   }
 
   // --- AUTH SYSTEM ---
@@ -145,130 +155,216 @@ class Store {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // --- SAVE & GITHUB API SYNC ---
-  saveAll(triggerGitHubPush = true) {
-    localStorage.setItem(STORAGE_KEYS.ROADMAP, JSON.stringify(this.roadmap));
-    localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(this.progress));
-    localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(this.achievements));
-
-    if (triggerGitHubPush && this.githubConfig.token && this.githubConfig.repo) {
-      // Debounced push to GitHub API
-      clearTimeout(this._ghPushTimer);
-      this._ghPushTimer = setTimeout(() => {
-        this.pushToGitHubRemote();
-      }, 1200);
-    }
+  // --- MONGODB ATLAS DATA API SYNC ---
+  async saveMongoConfig(apiKey, appId, cluster, database, region) {
+    this.mongoConfig = {
+      apiKey: apiKey.trim(),
+      appId: appId.trim(),
+      cluster: cluster.trim() || "Cluster0",
+      database: database.trim() || "placement_quest",
+      region: region.trim() || "ap-south-1"
+    };
+    localStorage.setItem(STORAGE_KEYS.MONGO_CONFIG, JSON.stringify(this.mongoConfig));
+    return await this.syncFromMongoAtlas();
   }
 
-  saveGitHubConfig(token, repo = "geeky-rish/code-tracker", branch = "main") {
-    this.githubConfig = { token: token.trim(), repo: repo.trim(), branch: branch.trim() };
-    localStorage.setItem(STORAGE_KEYS.GITHUB_CONFIG, JSON.stringify(this.githubConfig));
-    return this.syncFromGitHubRemote();
+  getMongoHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'Access-Control-Request-Headers': '*',
+      'api-key': this.mongoConfig.apiKey
+    };
   }
 
-  async syncFromGitHubRemote() {
-    if (!this.githubConfig.token || !this.githubConfig.repo) return false;
+  getMongoBaseUrl() {
+    // Atlas Data API endpoint format
+    return `https://${this.mongoConfig.region}.aws.data.mongodb-api.com/app/${this.mongoConfig.appId}/endpoint/data/v1/action`;
+  }
+
+  async syncFromMongoAtlas() {
+    if (!this.mongoConfig.apiKey || !this.mongoConfig.appId) return false;
     try {
-      const headers = {
-        'Authorization': `token ${this.githubConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json'
+      const url = this.getMongoBaseUrl();
+      const headers = this.getMongoHeaders();
+      const payload = {
+        cluster: this.mongoConfig.cluster,
+        database: this.mongoConfig.database,
+        dataSource: this.mongoConfig.cluster
       };
 
-      const repo = this.githubConfig.repo;
-      const branch = this.githubConfig.branch || 'main';
+      // Fetch user profile state document
+      const progressRes = await fetch(`${url}/findOne`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...payload,
+          collection: "progress",
+          filter: { username: AUTH_CONFIG.username }
+        })
+      });
 
-      const [rRes, pRes, aRes] = await Promise.all([
-        fetch(`https://api.github.com/repos/${repo}/contents/data/roadmap.json?ref=${branch}`, { headers }),
-        fetch(`https://api.github.com/repos/${repo}/contents/data/progress.json?ref=${branch}`, { headers }),
-        fetch(`https://api.github.com/repos/${repo}/contents/data/achievements.json?ref=${branch}`, { headers })
-      ]);
+      if (!progressRes.ok) return false;
+      const progressData = await progressRes.json();
 
-      if (rRes.ok && pRes.ok && aRes.ok) {
-        const [rData, pData, aData] = await Promise.all([rRes.json(), pRes.json(), aRes.json()]);
-
-        this.roadmap = JSON.parse(decodeURIComponent(escape(atob(rData.content))));
-        this.progress = JSON.parse(decodeURIComponent(escape(atob(pData.content))));
-        this.achievements = JSON.parse(decodeURIComponent(escape(atob(aData.content))));
-
-        // Save SHA for updates
-        this._shas = {
-          roadmap: rData.sha,
-          progress: pData.sha,
-          achievements: aData.sha
-        };
-
-        this.saveAll(false);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      console.warn("GitHub API sync failed, using localStorage fallback:", e);
-      return false;
-    }
-  }
-
-  async pushToGitHubRemote() {
-    if (!this.githubConfig.token || !this.githubConfig.repo) return;
-
-    try {
-      const headers = {
-        'Authorization': `token ${this.githubConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      };
-
-      const repo = this.githubConfig.repo;
-      const branch = this.githubConfig.branch || 'main';
-
-      const pushFile = async (path, contentObj, shaKey) => {
-        // Fetch current SHA if missing
-        let sha = this._shas ? this._shas[shaKey] : null;
-        if (!sha) {
-          const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`, { headers });
-          if (getRes.ok) {
-            const getData = await getRes.json();
-            sha = getData.sha;
-          }
-        }
-
-        const jsonStr = JSON.stringify(contentObj, null, 2);
-        const encodedContent = btoa(unescape(encodeURIComponent(jsonStr)));
-
-        const body = {
-          message: `auto-sync: update ${path} via Placement Quest App`,
-          content: encodedContent,
-          branch: branch
-        };
-        if (sha) body.sha = sha;
-
-        const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-          method: 'PUT',
+      if (progressData.document) {
+        this.progress = progressData.document.data;
+      } else {
+        // Seed remote progress if not found
+        await this.loadSeedData();
+        await fetch(`${url}/insertOne`, {
+          method: 'POST',
           headers,
-          body: JSON.stringify(body)
+          body: JSON.stringify({
+            ...payload,
+            collection: "progress",
+            document: { username: AUTH_CONFIG.username, data: this.progress }
+          })
         });
+      }
 
-        if (putRes.ok) {
-          const putData = await putRes.json();
-          if (!this._shas) this._shas = {};
-          this._shas[shaKey] = putData.content.sha;
+      // Fetch roadmap state document
+      const roadmapRes = await fetch(`${url}/findOne`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...payload,
+          collection: "roadmap",
+          filter: { username: AUTH_CONFIG.username }
+        })
+      });
+
+      if (roadmapRes.ok) {
+        const roadmapData = await roadmapRes.json();
+        if (roadmapData.document) {
+          this.roadmap = roadmapData.document.data;
+        } else {
+          // Seed remote roadmap if not found
+          await fetch(`${url}/insertOne`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              ...payload,
+              collection: "roadmap",
+              document: { username: AUTH_CONFIG.username, data: this.roadmap }
+            })
+          });
         }
+      }
+
+      // Fetch achievements document
+      const achRes = await fetch(`${url}/findOne`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...payload,
+          collection: "achievements",
+          filter: { username: AUTH_CONFIG.username }
+        })
+      });
+
+      if (achRes.ok) {
+        const achData = await achRes.json();
+        if (achData.document) {
+          this.achievements = achData.document.data;
+        } else {
+          // Seed remote achievements if not found
+          await fetch(`${url}/insertOne`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              ...payload,
+              collection: "achievements",
+              document: { username: AUTH_CONFIG.username, data: this.achievements }
+            })
+          });
+        }
+      }
+
+      this.saveLocalCache();
+      return true;
+    } catch (e) {
+      console.error("Error syncing from MongoDB Atlas:", e);
+      return false;
+    }
+  }
+
+  async pushToMongoAtlas() {
+    if (!this.mongoConfig.apiKey || !this.mongoConfig.appId) return;
+    try {
+      const url = this.getMongoBaseUrl();
+      const headers = this.getMongoHeaders();
+      const payload = {
+        cluster: this.mongoConfig.cluster,
+        database: this.mongoConfig.database,
+        dataSource: this.mongoConfig.cluster
+      };
+
+      // Perform updates (updateOne upsert equivalent)
+      const updateDoc = async (col, data) => {
+        await fetch(`${url}/updateOne`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            ...payload,
+            collection: col,
+            filter: { username: AUTH_CONFIG.username },
+            update: { $set: { data: data } },
+            upsert: true
+          })
+        });
       };
 
       await Promise.all([
-        pushFile('data/roadmap.json', this.roadmap, 'roadmap'),
-        pushFile('data/progress.json', this.progress, 'progress'),
-        pushFile('data/achievements.json', this.achievements, 'achievements')
+        updateDoc("progress", this.progress),
+        updateDoc("roadmap", this.roadmap),
+        updateDoc("achievements", this.achievements)
       ]);
 
       if (window.showToast) {
-        window.showToast("☁️ Auto-synced to GitHub repository!", "success", "GitHub");
+        window.showToast("🍃 MongoDB Atlas Real-Time Synced!", "success", "Atlas");
       }
     } catch (e) {
-      console.error("Failed pushing to GitHub API:", e);
+      console.error("Atlas push failed:", e);
     }
   }
 
   // --- GAME LOGIC ---
+  saveAll(triggerPush = true) {
+    this.saveLocalCache();
+    if (triggerPush) {
+      clearTimeout(this._dbPushTimer);
+      this._dbPushTimer = setTimeout(() => {
+        this.pushToMongoAtlas();
+      }, 1000);
+    }
+  }
+
+  getLevelInfo(xp = this.progress.user.xp) {
+    let current = LEVEL_THRESHOLDS[0];
+    let next = LEVEL_THRESHOLDS[1];
+
+    for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+      if (xp >= LEVEL_THRESHOLDS[i].xp) {
+        current = LEVEL_THRESHOLDS[i];
+        next = LEVEL_THRESHOLDS[i + 1] || { level: current.level + 1, xp: current.xp + 1000, title: "Legendary Architect" };
+      }
+    }
+
+    const currentLevelXP = xp - current.xp;
+    const requiredForNext = next.xp - current.xp;
+    const percent = Math.min(100, Math.floor((currentLevelXP / requiredForNext) * 100));
+
+    return {
+      level: current.level,
+      title: current.title,
+      currentXP: xp,
+      levelXP: currentLevelXP,
+      nextXP: next.xp,
+      requiredForNext,
+      percent
+    };
+  }
+
   updateStreak() {
     const today = new Date().toISOString().split('T')[0];
     const lastActive = this.progress.user.lastActiveDate;
@@ -320,32 +416,6 @@ class Store {
     };
   }
 
-  getLevelInfo(xp = this.progress.user.xp) {
-    let current = LEVEL_THRESHOLDS[0];
-    let next = LEVEL_THRESHOLDS[1];
-
-    for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
-      if (xp >= LEVEL_THRESHOLDS[i].xp) {
-        current = LEVEL_THRESHOLDS[i];
-        next = LEVEL_THRESHOLDS[i + 1] || { level: current.level + 1, xp: current.xp + 1000, title: "Legendary Architect" };
-      }
-    }
-
-    const currentLevelXP = xp - current.xp;
-    const requiredForNext = next.xp - current.xp;
-    const percent = Math.min(100, Math.floor((currentLevelXP / requiredForNext) * 100));
-
-    return {
-      level: current.level,
-      title: current.title,
-      currentXP: xp,
-      levelXP: currentLevelXP,
-      nextXP: next.xp,
-      requiredForNext,
-      percent
-    };
-  }
-
   toggleProblemStatus(problemId, status = null, notes = null) {
     const problem = this.roadmap.find(p => p.id === problemId);
     if (!problem) return null;
@@ -373,6 +443,57 @@ class Store {
     this.saveAll();
     this.checkAchievements();
     return { problem, xpResult };
+  }
+
+  toggleMissionTask(taskId) {
+    const task = this.progress.todayMission.tasks.find(t => t.id === taskId);
+    if (!task) return false;
+
+    task.completed = !task.completed;
+    if (task.completed) {
+      this.addXP(task.xp, `Completed ${task.title}`);
+    }
+    this.saveAll();
+    return true;
+  }
+
+  saveJournalEntry(learned, mistake, focus) {
+    const today = new Date().toISOString().split('T')[0];
+    if (!this.progress.journal) this.progress.journal = [];
+
+    const existingIdx = this.progress.journal.findIndex(j => j.date === today);
+    const newEntry = { date: today, learned, mistake, focus };
+
+    if (existingIdx >= 0) {
+      this.progress.journal[existingIdx] = newEntry;
+    } else {
+      this.progress.journal.unshift(newEntry);
+    }
+
+    this.saveAll();
+    return true;
+  }
+
+  triggerBossBattle() {
+    const result = this.addXP(500, "Boss Battle Victory!");
+    if (this.progress.bossBattles && this.progress.bossBattles.length > 0) {
+      this.progress.bossBattles[0].status = 'completed';
+    }
+
+    const bossAch = this.achievements.find(a => a.id === 'boss_slayer');
+    if (bossAch) {
+      bossAch.unlocked = true;
+      bossAch.unlockedAt = new Date().toISOString().split('T')[0];
+    }
+
+    this.saveAll();
+    return result;
+  }
+
+  saveGoals(dailyXpGoal, problemsPerDay, studyHours) {
+    this.progress.goals = { dailyXpGoal, problemsPerDay, studyHours };
+    this.saveAll();
+    return true;
   }
 
   checkAchievements() {
@@ -415,7 +536,7 @@ class Store {
 
   exportDataJSON() {
     const fullData = {
-      version: 1,
+      version: 4,
       exportedAt: new Date().toISOString(),
       roadmap: this.roadmap,
       progress: this.progress,
@@ -428,31 +549,6 @@ class Store {
     a.download = `placement-quest-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  async importDataJSON(jsonString) {
-    try {
-      const data = JSON.parse(jsonString);
-      if (data.roadmap && data.progress && data.achievements) {
-        this.roadmap = data.roadmap;
-        this.progress = data.progress;
-        this.achievements = data.achievements;
-        this.saveAll();
-        return true;
-      }
-      return false;
-    } catch (e) {
-      console.error("Import error:", e);
-      return false;
-    }
-  }
-
-  resetAllData() {
-    localStorage.removeItem(STORAGE_KEYS.ROADMAP);
-    localStorage.removeItem(STORAGE_KEYS.PROGRESS);
-    localStorage.removeItem(STORAGE_KEYS.ACHIEVEMENTS);
-    localStorage.removeItem(STORAGE_KEYS.GITHUB_CONFIG);
-    location.reload();
   }
 }
 

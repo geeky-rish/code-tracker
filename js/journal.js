@@ -1,5 +1,5 @@
 /**
- * Placement Quest - Daily Journal Engine
+ * Placement Quest - Daily Journal Engine (MongoDB)
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -15,7 +15,7 @@ function initJournal() {
   renderJournalHistory();
 }
 
-function saveJournalEntry(e) {
+async function saveJournalEntry(e) {
   e.preventDefault();
   const learned = document.getElementById('journal-learned').value.trim();
   const mistake = document.getElementById('journal-mistake').value.trim();
@@ -26,27 +26,13 @@ function saveJournalEntry(e) {
     return;
   }
 
-  const store = window.appStore;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const success = await window.appStore.saveJournalEntry(learned, mistake, focus);
 
-  if (!store.progress.journal) store.progress.journal = [];
-
-  // Check if entry for today already exists
-  const existingIdx = store.progress.journal.findIndex(entry => entry.date === todayStr);
-  const newEntry = { date: todayStr, learned, mistake, focus };
-
-  if (existingIdx >= 0) {
-    store.progress.journal[existingIdx] = newEntry;
-  } else {
-    store.progress.journal.unshift(newEntry);
+  if (success) {
+    window.showToast("Daily Journal saved to MongoDB!", "success", "📝");
+    document.getElementById('journal-form').reset();
+    renderJournalHistory();
   }
-
-  store.saveAll();
-  window.showToast("Daily Journal saved successfully!", "success", "📝");
-
-  // Reset form & re-render timeline
-  document.getElementById('journal-form').reset();
-  renderJournalHistory();
 }
 
 function renderJournalHistory() {

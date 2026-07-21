@@ -1,5 +1,5 @@
 /**
- * Placement Quest - Roadmap & Problems List Engine
+ * Placement Quest - Roadmap & Problems List Engine (MongoDB API)
  */
 
 let currentFilter = 'all';
@@ -49,7 +49,6 @@ function renderRoadmapList() {
 
   let problems = store.roadmap;
 
-  // Filter logic
   if (currentFilter === 'core') {
     problems = problems.filter(p => p.isCore);
   } else if (currentFilter === 'phase1') {
@@ -64,7 +63,6 @@ function renderRoadmapList() {
     problems = problems.filter(p => p.status === 'completed');
   }
 
-  // Search logic
   if (currentSearch) {
     problems = problems.filter(p => 
       p.title.toLowerCase().includes(currentSearch) ||
@@ -129,16 +127,16 @@ function renderRoadmapList() {
   }).join('');
 }
 
-function toggleProblemSolved(problemId) {
+async function toggleProblemSolved(problemId) {
   const store = window.appStore;
-  const result = store.toggleProblemStatus(problemId);
+  const res = await store.toggleProblemStatus(problemId);
   
-  if (!result) return;
+  if (!res) return;
 
-  if (result.problem.status === 'completed') {
-    window.showToast(`Solved: ${result.problem.title} (+${result.problem.xp} XP)`, 'success', '🎯');
-    if (result.xpResult && result.xpResult.leveledUp) {
-      window.showLevelUpModal(result.xpResult.newLevel);
+  if (res.problem.status === 'completed') {
+    window.showToast(`Solved: ${res.problem.title} (+${res.problem.xp} XP)`, 'success', '🎯');
+    if (res.xpResult && res.xpResult.leveledUp) {
+      window.showLevelUpModal(res.xpResult.newLevel);
     }
   }
 
@@ -153,12 +151,12 @@ function toggleNotesEditor(problemId) {
   }
 }
 
-function saveProblemNote(problemId) {
+async function saveProblemNote(problemId) {
   const textElem = document.getElementById(`notes-text-${problemId}`);
   if (!textElem) return;
 
   const notesText = textElem.value.trim();
-  window.appStore.toggleProblemStatus(problemId, null, notesText);
+  await window.appStore.toggleProblemStatus(problemId, null, notesText);
   window.showToast(`Saved note for problem #${problemId}`, 'success', '📝');
   
   toggleNotesEditor(problemId);
