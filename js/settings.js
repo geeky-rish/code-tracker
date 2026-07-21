@@ -1,5 +1,5 @@
 /**
- * Placement Quest - Settings Engine (MongoDB Data API)
+ * Placement Quest - Settings Engine (Pure Local Storage)
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -18,19 +18,9 @@ function initSettings() {
   document.getElementById('goal-xp').value = goals.dailyXpGoal || 150;
   document.getElementById('goal-problems').value = goals.problemsPerDay || 3;
   document.getElementById('goal-hours').value = goals.studyHours || 3;
-
-  // MongoDB Atlas configuration inputs
-  const mongo = store.mongoConfig || {};
-  document.getElementById('mongo-apikey').value = mongo.apiKey || '';
-  document.getElementById('mongo-appid').value = mongo.appId || '';
-  document.getElementById('mongo-cluster').value = mongo.cluster || 'Cluster0';
-  document.getElementById('mongo-database').value = mongo.database || 'placement_quest';
-  document.getElementById('mongo-region').value = mongo.region || 'ap-south-1';
-
-  updateMongoStatus(!!mongo.apiKey);
 }
 
-async function saveGoals(e) {
+function saveGoals(e) {
   e.preventDefault();
   const store = window.appStore;
   
@@ -44,47 +34,35 @@ async function saveGoals(e) {
   }
 }
 
-async function saveMongoSync(e) {
-  e.preventDefault();
-  const apiKey = document.getElementById('mongo-apikey').value.trim();
-  const appId = document.getElementById('mongo-appid').value.trim();
-  const cluster = document.getElementById('mongo-cluster').value.trim();
-  const database = document.getElementById('mongo-database').value.trim();
-  const region = document.getElementById('mongo-region').value.trim();
-
-  if (!apiKey || !appId) {
-    window.showToast("Please fill in both your Atlas API Key and App ID!", "danger", "⚠️");
-    return;
-  }
-
-  window.showToast("Establishing connection to MongoDB Atlas...", "info", "🍃");
-  const success = await window.appStore.saveMongoConfig(apiKey, appId, cluster, database, region);
-
-  if (success) {
-    updateMongoStatus(true);
-    window.showToast("🍃 Connected to MongoDB Atlas! Data synced successfully.", "success", "⚡");
-  } else {
-    updateMongoStatus(false);
-    window.showToast("Connection failed. Check API key permissions and App ID.", "danger", "❌");
-  }
-}
-
-function updateMongoStatus(isConnected) {
-  const statusElem = document.getElementById('mongo-status-badge');
-  if (statusElem) {
-    if (isConnected) {
-      statusElem.innerHTML = `<span style="color: var(--emerald); font-weight: 700;">🟢 Connected to Atlas</span>`;
-    } else {
-      statusElem.innerHTML = `<span style="color: var(--text-dim); font-weight: 600;">⚪ Disconnected</span>`;
-    }
-  }
-}
-
 function exportJSON() {
   window.appStore.exportDataJSON();
   window.showToast("Data exported as JSON file!", "success", "📥");
 }
 
+function importJSONFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const success = await window.appStore.importDataJSON(e.target.result);
+    if (success) {
+      window.showToast("Data imported successfully! Reloading...", "success", "📤");
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      window.showToast("Invalid JSON file format!", "danger", "❌");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetProgress() {
+  if (confirm("Are you sure you want to reset ALL progress? This will clear your XP, streak, and problem checkboxes.")) {
+    window.appStore.resetAllData();
+  }
+}
+
 window.saveGoals = saveGoals;
-window.saveMongoSync = saveMongoSync;
 window.exportJSON = exportJSON;
+window.importJSONFile = importJSONFile;
+window.resetProgress = resetProgress;

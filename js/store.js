@@ -1,13 +1,14 @@
 /**
- * Placement Quest - Pure GitHub Pages + MongoDB Atlas Data API Engine
- * 100% Client-Side Static App (Zero Backend Services)
- * Communicates directly with MongoDB Atlas via the Atlas HTTPS Data API
+ * Placement Quest - Pure Local Storage & Zero-Backend Engine
+ * 100% Client-Side Static App
+ * Saves progress entirely in local storage. Sync via manual JSON Export/Import.
  */
 
 const STORAGE_KEYS = {
-  AUTH: 'placement_quest_auth_v4',
-  LOCAL_DATA: 'placement_quest_local_cache_v4',
-  MONGO_CONFIG: 'placement_quest_mongo_config_v4'
+  ROADMAP: 'placement_quest_roadmap_v6',
+  PROGRESS: 'placement_quest_progress_v6',
+  ACHIEVEMENTS: 'placement_quest_achievements_v6',
+  AUTH: 'placement_quest_auth_v6'
 };
 
 const AUTH_CONFIG = {
@@ -35,15 +36,6 @@ class Store {
     this.progress = { user: {}, goals: {}, todayMission: { tasks: [] }, heatmap: {}, journal: [], bossBattles: [] };
     this.achievements = [];
     this.isInitialized = false;
-
-    // MongoDB Data API Configuration
-    this.mongoConfig = {
-      apiKey: "",
-      appId: "", // Atlas App Services App ID
-      cluster: "Cluster0",
-      database: "placement_quest",
-      region: "ap-south-1" // Default AWS Region
-    };
   }
 
   async init() {
@@ -53,29 +45,18 @@ class Store {
         return false;
       }
 
-      // Load Config from localStorage
-      const savedMongo = localStorage.getItem(STORAGE_KEYS.MONGO_CONFIG);
-      if (savedMongo) {
-        this.mongoConfig = JSON.parse(savedMongo);
-      }
+      // Load from Local Storage
+      const cachedRoadmap = localStorage.getItem(STORAGE_KEYS.ROADMAP);
+      const cachedProgress = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+      const cachedAchievements = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
 
-      // Pull latest from MongoDB Atlas if API Key is configured
-      let syncSuccess = false;
-      if (this.mongoConfig.apiKey && this.mongoConfig.appId) {
-        syncSuccess = await this.syncFromMongoAtlas();
-      }
-
-      if (!syncSuccess) {
-        // Fallback to local cache or fetch default JSON seed files
-        const cached = localStorage.getItem(STORAGE_KEYS.LOCAL_DATA);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          this.roadmap = parsed.roadmap;
-          this.progress = parsed.progress;
-          this.achievements = parsed.achievements;
-        } else {
-          await this.loadSeedData();
-        }
+      if (cachedRoadmap && cachedProgress && cachedAchievements) {
+        this.roadmap = JSON.parse(cachedRoadmap);
+        this.progress = JSON.parse(cachedProgress);
+        this.achievements = JSON.parse(cachedAchievements);
+      } else {
+        // Fallback to initial local seed files (pristine template)
+        await this.loadSeedData();
       }
 
       this.updateStreak();
@@ -97,18 +78,10 @@ class Store {
     this.roadmap = await rRes.json();
     this.progress = await pRes.json();
     this.achievements = await aRes.json();
-    this.saveLocalCache();
+    this.saveAll();
   }
 
-  saveLocalCache() {
-    localStorage.setItem(STORAGE_KEYS.LOCAL_DATA, JSON.stringify({
-      roadmap: this.roadmap,
-      progress: this.progress,
-      achievements: this.achievements
-    }));
-  }
-
-  // --- AUTH SYSTEM ---
+  // --- AUTH ---
   checkAuthSession() {
     const authData = localStorage.getItem(STORAGE_KEYS.AUTH);
     if (!authData) return false;
@@ -155,191 +128,15 @@ class Store {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // --- MONGODB ATLAS DATA API SYNC ---
-  async saveMongoConfig(apiKey, appId, cluster, database, region) {
-    this.mongoConfig = {
-      apiKey: apiKey.trim(),
-      appId: appId.trim(),
-      cluster: cluster.trim() || "Cluster0",
-      database: database.trim() || "placement_quest",
-      region: region.trim() || "ap-south-1"
-    };
-    localStorage.setItem(STORAGE_KEYS.MONGO_CONFIG, JSON.stringify(this.mongoConfig));
-    return await this.syncFromMongoAtlas();
-  }
-
-  getMongoHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'Access-Control-Request-Headers': '*',
-      'api-key': this.mongoConfig.apiKey
-    };
-  }
-
-  getMongoBaseUrl() {
-    // Atlas Data API endpoint format
-    return `https://${this.mongoConfig.region}.aws.data.mongodb-api.com/app/${this.mongoConfig.appId}/endpoint/data/v1/action`;
-  }
-
-  async syncFromMongoAtlas() {
-    if (!this.mongoConfig.apiKey || !this.mongoConfig.appId) return false;
-    try {
-      const url = this.getMongoBaseUrl();
-      const headers = this.getMongoHeaders();
-      const payload = {
-        cluster: this.mongoConfig.cluster,
-        database: this.mongoConfig.database,
-        dataSource: this.mongoConfig.cluster
-      };
-
-      // Fetch user profile state document
-      const progressRes = await fetch(`${url}/findOne`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          ...payload,
-          collection: "progress",
-          filter: { username: AUTH_CONFIG.username }
-        })
-      });
-
-      if (!progressRes.ok) return false;
-      const progressData = await progressRes.json();
-
-      if (progressData.document) {
-        this.progress = progressData.document.data;
-      } else {
-        // Seed remote progress if not found
-        await this.loadSeedData();
-        await fetch(`${url}/insertOne`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            ...payload,
-            collection: "progress",
-            document: { username: AUTH_CONFIG.username, data: this.progress }
-          })
-        });
-      }
-
-      // Fetch roadmap state document
-      const roadmapRes = await fetch(`${url}/findOne`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          ...payload,
-          collection: "roadmap",
-          filter: { username: AUTH_CONFIG.username }
-        })
-      });
-
-      if (roadmapRes.ok) {
-        const roadmapData = await roadmapRes.json();
-        if (roadmapData.document) {
-          this.roadmap = roadmapData.document.data;
-        } else {
-          // Seed remote roadmap if not found
-          await fetch(`${url}/insertOne`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              ...payload,
-              collection: "roadmap",
-              document: { username: AUTH_CONFIG.username, data: this.roadmap }
-            })
-          });
-        }
-      }
-
-      // Fetch achievements document
-      const achRes = await fetch(`${url}/findOne`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          ...payload,
-          collection: "achievements",
-          filter: { username: AUTH_CONFIG.username }
-        })
-      });
-
-      if (achRes.ok) {
-        const achData = await achRes.json();
-        if (achData.document) {
-          this.achievements = achData.document.data;
-        } else {
-          // Seed remote achievements if not found
-          await fetch(`${url}/insertOne`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              ...payload,
-              collection: "achievements",
-              document: { username: AUTH_CONFIG.username, data: this.achievements }
-            })
-          });
-        }
-      }
-
-      this.saveLocalCache();
-      return true;
-    } catch (e) {
-      console.error("Error syncing from MongoDB Atlas:", e);
-      return false;
-    }
-  }
-
-  async pushToMongoAtlas() {
-    if (!this.mongoConfig.apiKey || !this.mongoConfig.appId) return;
-    try {
-      const url = this.getMongoBaseUrl();
-      const headers = this.getMongoHeaders();
-      const payload = {
-        cluster: this.mongoConfig.cluster,
-        database: this.mongoConfig.database,
-        dataSource: this.mongoConfig.cluster
-      };
-
-      // Perform updates (updateOne upsert equivalent)
-      const updateDoc = async (col, data) => {
-        await fetch(`${url}/updateOne`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            ...payload,
-            collection: col,
-            filter: { username: AUTH_CONFIG.username },
-            update: { $set: { data: data } },
-            upsert: true
-          })
-        });
-      };
-
-      await Promise.all([
-        updateDoc("progress", this.progress),
-        updateDoc("roadmap", this.roadmap),
-        updateDoc("achievements", this.achievements)
-      ]);
-
-      if (window.showToast) {
-        window.showToast("🍃 MongoDB Atlas Real-Time Synced!", "success", "Atlas");
-      }
-    } catch (e) {
-      console.error("Atlas push failed:", e);
-    }
+  // --- SAVE ---
+  saveAll() {
+    localStorage.setItem(STORAGE_KEYS.ROADMAP, JSON.stringify(this.roadmap));
+    localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(this.progress));
+    localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(this.achievements));
   }
 
   // --- GAME LOGIC ---
-  saveAll(triggerPush = true) {
-    this.saveLocalCache();
-    if (triggerPush) {
-      clearTimeout(this._dbPushTimer);
-      this._dbPushTimer = setTimeout(() => {
-        this.pushToMongoAtlas();
-      }, 1000);
-    }
-  }
-
-  getLevelInfo(xp = this.progress.user.xp) {
+  getLevelInfo(xp = (this.progress.user ? this.progress.user.xp : 0)) {
     let current = LEVEL_THRESHOLDS[0];
     let next = LEVEL_THRESHOLDS[1];
 
@@ -536,7 +333,7 @@ class Store {
 
   exportDataJSON() {
     const fullData = {
-      version: 4,
+      version: 6,
       exportedAt: new Date().toISOString(),
       roadmap: this.roadmap,
       progress: this.progress,
@@ -549,6 +346,30 @@ class Store {
     a.download = `placement-quest-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async importDataJSON(jsonString) {
+    try {
+      const data = JSON.parse(jsonString);
+      if (data.roadmap && data.progress && data.achievements) {
+        this.roadmap = data.roadmap;
+        this.progress = data.progress;
+        this.achievements = data.achievements;
+        this.saveAll();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Import error:", e);
+      return false;
+    }
+  }
+
+  resetAllData() {
+    localStorage.removeItem(STORAGE_KEYS.ROADMAP);
+    localStorage.removeItem(STORAGE_KEYS.PROGRESS);
+    localStorage.removeItem(STORAGE_KEYS.ACHIEVEMENTS);
+    location.reload();
   }
 }
 
