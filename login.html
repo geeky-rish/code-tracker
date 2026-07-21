@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Placement Quest</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body style="align-items: center; justify-content: center; background-image: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.12) 0%, transparent 60%);">
+
+  <div class="card" style="max-width: 420px; width: 90%; padding: 36px; text-align: center; border-color: rgba(14, 165, 233, 0.25); box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);">
+    
+    <div style="font-size: 3rem; margin-bottom: 12px;">⚔️</div>
+    <h1 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #fff, var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+      Placement Quest
+    </h1>
+    <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 28px;">
+      Restricted Access Dashboard • Please Authenticate
+    </p>
+
+    <div id="login-error" style="display: none; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); color: var(--rose); font-size: 0.85rem; padding: 10px; border-radius: var(--radius-sm); margin-bottom: 20px;"></div>
+
+    <form onsubmit="handleLogin(event)" style="display: flex; flex-direction: column; gap: 18px;">
+      <div class="form-group" style="text-align: left;">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" class="form-control" placeholder="Enter username" required autofocus>
+      </div>
+
+      <div class="form-group" style="text-align: left;">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" class="form-control" placeholder="••••••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="justify-content: center; padding: 12px; font-size: 0.95rem; margin-top: 8px;">
+        🔓 Unlock Dashboard
+      </button>
+    </form>
+
+  </div>
+
+  <script src="js/store.js"></script>
+  <script>
+    // If already authenticated, redirect to index
+    if (window.appStore && window.appStore.checkAuthSession()) {
+      window.location.href = 'index.html';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('login-username').value;
+      const p = document.getElementById('login-password').value;
+      const errElem = document.getElementById('login-error');
+
+      const res = await window.appStore.login(u, p);
+      if (res.success) {
+        window.location.href = 'index.html';
+      } else {
+        errElem.innerText = res.message || "Invalid credentials!";
+        errElem.style.display = 'block';
+      }
+    }
+  </script>
+
+</body>
+</html>

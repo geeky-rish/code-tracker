@@ -13,9 +13,14 @@ const MOTIVATIONAL_QUOTES = [
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await window.appStore.init();
-  renderNavbar();
-  renderMotivationalQuote();
+  const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+  if (currentPath === 'login.html') return;
+
+  const initialized = await window.appStore.init();
+  if (initialized) {
+    renderNavbar();
+    renderMotivationalQuote();
+  }
 });
 
 function renderNavbar() {
@@ -23,7 +28,6 @@ function renderNavbar() {
   const streak = window.appStore.progress.user.currentStreak || 1;
   const xp = window.appStore.progress.user.xp || 0;
 
-  // Determine active route
   const currentPath = window.location.pathname.split('/').pop() || 'index.html';
 
   const navHTML = `
@@ -47,6 +51,9 @@ function renderNavbar() {
         <div class="stat-pill streak" title="Current Active Streak">🔥 ${streak} Days</div>
         <div class="stat-pill level" title="Current Level">Lvl ${levelInfo.level}</div>
         <div class="stat-pill xp" title="Total XP Earned">⚡ ${xp} XP</div>
+        <button class="btn btn-outline" style="padding: 6px 10px; font-size: 0.78rem;" onclick="window.appStore.logout()" title="Logout">
+          🔒 Logout
+        </button>
       </div>
     </div>
   `;
@@ -81,7 +88,7 @@ function showLevelUpModal(levelInfo) {
   modalOverlay.className = 'modal-overlay active';
   modalOverlay.innerHTML = `
     <div class="modal-content">
-      <div style="font-size: 3.5rem; margin-bottom: 12px; animation: bounce 1s infinite alternate;">🎉</div>
+      <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
       <h2 style="font-family: var(--font-heading); font-size: 2rem; color: var(--emerald); margin-bottom: 8px;">LEVEL UP!</h2>
       <p style="font-size: 1.2rem; font-weight: 700; margin-bottom: 4px;">Level ${levelInfo.level}: ${levelInfo.title}</p>
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">You have earned enough XP to reach the next tier of mastery!</p>

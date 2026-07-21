@@ -1,5 +1,5 @@
 /**
- * Placement Quest - Settings & Data Storage Engine
+ * Placement Quest - Settings & GitHub API Sync Engine
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -18,6 +18,14 @@ function initSettings() {
   document.getElementById('goal-xp').value = goals.dailyXpGoal || 150;
   document.getElementById('goal-problems').value = goals.problemsPerDay || 3;
   document.getElementById('goal-hours').value = goals.studyHours || 3;
+
+  // GitHub Sync fields
+  const ghConfig = store.githubConfig || {};
+  document.getElementById('gh-token').value = ghConfig.token || '';
+  document.getElementById('gh-repo').value = ghConfig.repo || 'geeky-rish/code-tracker';
+  document.getElementById('gh-branch').value = ghConfig.branch || 'main';
+
+  updateGhStatus(!!ghConfig.token);
 }
 
 function saveGoals(e) {
@@ -32,6 +40,40 @@ function saveGoals(e) {
 
   store.saveAll();
   window.showToast("Daily goals updated successfully!", "success", "⚙️");
+}
+
+async function saveGitHubSync(e) {
+  e.preventDefault();
+  const token = document.getElementById('gh-token').value.trim();
+  const repo = document.getElementById('gh-repo').value.trim();
+  const branch = document.getElementById('gh-branch').value.trim();
+
+  if (!token) {
+    window.showToast("Please enter a valid GitHub Personal Access Token", "danger", "⚠️");
+    return;
+  }
+
+  window.showToast("Testing GitHub API connection...", "info", "🔍");
+  const success = await window.appStore.saveGitHubConfig(token, repo, branch);
+
+  if (success) {
+    updateGhStatus(true);
+    window.showToast("☁️ Connected to GitHub API! Automatic cross-device sync active.", "success", "⚡");
+  } else {
+    updateGhStatus(false);
+    window.showToast("Failed to sync with GitHub API. Check token permissions.", "danger", "❌");
+  }
+}
+
+function updateGhStatus(isConnected) {
+  const statusElem = document.getElementById('gh-status-badge');
+  if (statusElem) {
+    if (isConnected) {
+      statusElem.innerHTML = `<span style="color: var(--emerald); font-weight: 700;">🟢 Active Sync</span>`;
+    } else {
+      statusElem.innerHTML = `<span style="color: var(--text-dim); font-weight: 600;">⚪ Disconnected</span>`;
+    }
+  }
 }
 
 function exportJSON() {
@@ -63,6 +105,7 @@ function resetProgress() {
 }
 
 window.saveGoals = saveGoals;
+window.saveGitHubSync = saveGitHubSync;
 window.exportJSON = exportJSON;
 window.importJSONFile = importJSONFile;
 window.resetProgress = resetProgress;
